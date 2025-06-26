@@ -60,7 +60,7 @@ const CalendarMainLayer = () => {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/camps');
+                const response = await fetch('https://blood-backend-lf52.onrender.com/api/camps');
                 if (!response.ok) {
                     throw new Error('Failed to fetch camps');
                 }
@@ -106,7 +106,7 @@ const CalendarMainLayer = () => {
             const formattedStartTime = startDate.toTimeString().substring(0, 5);
             const formattedEndTime = endDate.toTimeString().substring(0, 5);
 
-            const response = await fetch('http://localhost:3000/api/camps', {
+            const response = await fetch('https://blood-backend-lf52.onrender.com/api/camps', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -165,7 +165,7 @@ const CalendarMainLayer = () => {
             const formattedStartTime = startDate.toTimeString().substring(0, 5);
             const formattedEndTime = endDate.toTimeString().substring(0, 5);
 
-            const response = await fetch(`http://localhost:3000/api/camps/${currentEvent.id}`, {
+            const response = await fetch(`https://blood-backend-lf52.onrender.com/api/camps/${currentEvent.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ const CalendarMainLayer = () => {
 
     const handleDeleteEvent = async () => {
         try {
-            const response = await fetch(`http://localhost:3000/api/camps/${currentEvent.id}`, {
+            const response = await fetch(`https://blood-backend-lf52.onrender.com/api/camps/${currentEvent.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`

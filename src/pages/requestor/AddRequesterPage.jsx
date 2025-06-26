@@ -20,7 +20,7 @@ const AddRequesterPage = () => {
         // Fetch requests from backend API
         setIsLoading(true);
         setError(null);
-        fetch('http://localhost:3000/api/requester')
+        fetch('https://blood-backend-lf52.onrender.com/api/requester')
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -226,7 +226,7 @@ const AddRequesterPage = () => {
                     )}
                 </div>
             </div>
-            
+
             {/* Details Modal */}
             <Modal show={showDetails} onHide={handleCloseDetails} size="lg" className="details-modal">
                 <Modal.Header closeButton>
@@ -241,14 +241,14 @@ const AddRequesterPage = () => {
                                 )}
                                 <p><strong>Reason:</strong> {selectedRequest.details.reason}</p>
                             </div>
-                            
+
                             <div className="details-section">
                                 <h5>Blood Needed</h5>
                                 <p><strong>Blood Type:</strong> {selectedRequest.details.bloodNeeded}</p>
                                 <p><strong>Amount Needed:</strong> {selectedRequest.details.amountNeeded}</p>
                                 <p><strong>Requested Time:</strong> {selectedRequest.details.requestedTime}</p>
                             </div>
-                            
+
                             <div className="details-section">
                                 <h5>Hospital Details</h5>
                                 <p><strong>Hospital:</strong> {selectedRequest.details.hospital}</p>
@@ -257,7 +257,7 @@ const AddRequesterPage = () => {
                                 <p><strong>Contact:</strong> {selectedRequest.details.contact}</p>
                                 <p><strong>Doctor:</strong> {selectedRequest.details.doctor}</p>
                             </div>
-                            
+
                             <div className="details-section">
                                 <h5>Personal Details</h5>
                                 <p><strong>Full Name:</strong> {selectedRequest.details.fullName}</p>

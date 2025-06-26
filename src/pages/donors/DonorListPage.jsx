@@ -16,7 +16,7 @@ const DonorListPage = () => {
     useEffect(() => {
         const fetchDonors = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/donors');
+                const response = await fetch('https://blood-backend-lf52.onrender.com/api/donors');
                 if (!response.ok) {
                     throw new Error('Failed to fetch donors');
                 }

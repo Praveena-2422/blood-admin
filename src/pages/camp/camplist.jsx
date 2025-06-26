@@ -14,7 +14,7 @@ const CalendarMainPage = () => {
   useEffect(() => {
     const fetchCamps = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/camps');
+        const response = await fetch('https://blood-backend-lf52.onrender.com/api/camps');
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -56,7 +56,7 @@ const CalendarMainPage = () => {
   return (
     <MasterLayout>
       <CalendarMainLayer />
-      
+
       <div className="card basic-data-table">
         <div className="card-header">
           <h5 className="card-title mb-0 text-sm">Blood Camp History</h5>
