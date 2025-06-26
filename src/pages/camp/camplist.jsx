@@ -84,7 +84,7 @@ const CalendarMainPage = () => {
               </tr>
             </thead>
             <tbody>
-              {camps.map((camp, index) => (
+              {camps && camps.map((camp, index) => (
                 <tr key={camp.id}>
                   <td>
                     <div className="form-check style-check d-flex align-items-center">
