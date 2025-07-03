@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { apiClient } from '../../network/apiClient';
 import MasterLayout from "../../masterLayout/MasterLayout";
 import $ from 'jquery';
 import 'datatables.net-dt/js/dataTables.dataTables.js';
@@ -16,30 +17,30 @@ const DonorListPage = () => {
     useEffect(() => {
         const fetchDonors = async () => {
             try {
-                const response = await fetch('https://blood-backend-lf52.onrender.com/api/donors');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch donors');
-                }
-                const data = await response.json();
-                console.log('API Response:', data); // Debug log
-                if (data.donors) {
-                    setDonors(data.donors.map(donor => ({
-                        id: donor._id,
+                // Fetch from the new backend endpoint
+                const response = await apiClient.get('/user/getAllUser');
+                console.log('API Response:', response.data); // Debug log
+                const data = response.data;
+                if (data && data.data) {
+                    setDonors(data.data.map(donor => ({
                         name: donor.fullName,
                         bloodGroup: donor.bloodGroup,
                         mobileNo: donor.mobileNumber,
                         lastDate: donor.lastDonationDate,
-                        address: `${donor.area}, ${donor.city}, ${donor.state}`
+                        address: `${donor.area}, ${donor.city}`
                     })));
                 } else {
                     setError('Invalid API response format');
+                    console.error('Invalid API response format', data);
                 }
             } catch (err) {
-                setError(err.message);
+                setError(err.message || 'Failed to fetch donors');
+                console.error('Error fetching donors:', err);
             } finally {
                 setLoading(false);
             }
         };
+
         fetchDonors();
     }, []);
 
@@ -114,77 +115,27 @@ const DonorListPage = () => {
                         ref={tableRef}
                         className="table bordered-table mb-0 text-xs"
                         id="dataTable"
+                        
                         data-page-length={10}
                     >
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th className="text-xs">S No</th>
                                 <th className="text-xs">Name</th>
                                 <th className="text-xs">Blood Group</th>
                                 <th className="text-xs">Mobile No</th>
-                                <th className="text-xs">Last Donation Date</th>
-                                <th className="text-xs" style={{ position: 'relative', zIndex: 1000 }}>
-                                    <div className="dropdown">
-                                        <button
-                                            className="btn btn-link p-0 text-xs dropdown-toggle"
-                                            type="button"
-                                            id="availabilityDropdown"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false"
-                                        >
-                                            {availabilityFilter === 'all'
-                                                ? 'All'
-                                                : availabilityFilter === 'available'
-                                                    ? 'Available'
-                                                    : 'Unavailable'}
-                                            <Icon icon="material-symbols:arrow-drop-down" width="16" />
-                                        </button>
-                                        <ul
-                                            className="dropdown-menu"
-                                            aria-labelledby="availabilityDropdown"
-                                            style={{
-                                                zIndex: 1055,
-                                                position: 'absolute',
-                                                inset: 'unset'
-                                            }}
-                                        >
-                                            <li>
-                                                <button
-                                                    className={`dropdown-item text-xs ${availabilityFilter === 'all' ? 'active' : ''}`}
-                                                    onClick={() => setAvailabilityFilter('all')}
-                                                >
-                                                    All
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button
-                                                    className={`dropdown-item text-xs ${availabilityFilter === 'available' ? 'active' : ''}`}
-                                                    onClick={() => setAvailabilityFilter('available')}
-                                                >
-                                                    Available
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button
-                                                    className={`dropdown-item text-xs ${availabilityFilter === 'unavailable' ? 'active' : ''}`}
-                                                    onClick={() => setAvailabilityFilter('unavailable')}
-                                                >
-                                                    Unavailable
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </th>
+                                <th className="text-xs">Last Donation</th>
+                                <th className="text-xs">Availability</th>
                                 <th className="text-xs">Address</th>
                                 <th className="text-xs">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredDonors.map((donor) => {
+                            {filteredDonors.map((donor, idx) => {
                                 const available = isAvailable(donor.lastDate);
                                 return (
-                                    <tr key={donor.id}>
-                                        <td className="text-xs">{donor.id}</td>
+                                    <tr key={idx}>
+                                        <td className="text-xs">{idx + 1}</td>
                                         <td className="text-xs">{donor.name}</td>
                                         <td className="text-xs">{donor.bloodGroup}</td>
                                         <td className="text-xs">{donor.mobileNo}</td>

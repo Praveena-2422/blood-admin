@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { apiClient } from '../../network/apiClient';
 import MasterLayout from "../../masterLayout/MasterLayout";
 import $ from 'jquery';
 import 'datatables.net-dt/js/dataTables.dataTables.js';
@@ -20,43 +21,41 @@ const AddRequesterPage = () => {
         // Fetch requests from backend API
         setIsLoading(true);
         setError(null);
-        fetch('https://blood-backend-lf52.onrender.com/api/requester')
+        apiClient.get('/requester')
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Ensure we have the data array and map it to the expected format
-                const formattedRequests = Array.isArray(data.data) ? data.data.map(request => ({
-                    id: request._id,
-                    hospital: request.bloodRequirementDetails.hospitalName,
-                    bloodGroup: request.bloodRequirementDetails.requiredBloodGroup,
-                    location: `${request.locationDetails.city}, ${request.locationDetails.state}`,
-                    contact: request.bloodRequirementDetails.contactNumber,
-                    requestedTime: new Date(request.bloodRequirementDetails.neededOn).toLocaleString(),
-                    urgency: request.bloodRequirementDetails.isEmergency ? 'High' : 'Medium',
-                    details: {
-                        critical: request.bloodRequirementDetails.isEmergency ? 'CRITICAL EMERGENCY' : null,
-                        bloodNeeded: request.bloodRequirementDetails.requiredBloodGroup,
-                        amountNeeded: `${request.bloodRequirementDetails.unitsNeeded} units`,
-                        requestedTime: new Date(request.bloodRequirementDetails.neededOn).toLocaleString(),
+                const data = response.data;
+                if (data && data.requests) {
+                    const formattedRequests = data.requests.map(request => ({
+                        id: request._id,
                         hospital: request.bloodRequirementDetails.hospitalName,
-                        hospitalLocation: request.bloodRequirementDetails.hospitalAddress,
-                        distance: '5 km', // You might want to calculate this
+                        bloodGroup: request.bloodRequirementDetails.requiredBloodGroup,
+                        location: `${request.locationDetails.city}, ${request.locationDetails.state}`,
                         contact: request.bloodRequirementDetails.contactNumber,
-                        fullName: request.personalDetails.fullName,
-                        mobileNumber: request.personalDetails.mobileNumber,
-                        email: request.personalDetails.emailAddress,
-                        relationship: request.personalDetails.relationshipToPatient,
-                        patientAge: request.personalDetails.patientAge,
-                        gender: request.personalDetails.gender,
-                        reason: request.bloodRequirementDetails.reasonForRequest,
-                        doctor: request.bloodRequirementDetails.doctorReferenceName
-                    }
-                })) : [];
-                setRequests(formattedRequests);
+                        requestedTime: new Date(request.bloodRequirementDetails.neededOn).toLocaleString(),
+                        urgency: request.bloodRequirementDetails.isEmergency ? 'High' : 'Medium',
+                        details: {
+                            critical: request.bloodRequirementDetails.isEmergency ? 'CRITICAL EMERGENCY' : null,
+                            bloodNeeded: request.bloodRequirementDetails.requiredBloodGroup,
+                            amountNeeded: `${request.bloodRequirementDetails.unitsNeeded} units`,
+                            requestedTime: new Date(request.bloodRequirementDetails.neededOn).toLocaleString(),
+                            hospital: request.bloodRequirementDetails.hospitalName,
+                            hospitalLocation: request.bloodRequirementDetails.hospitalAddress,
+                            distance: '5 km', // You might want to calculate this
+                            contact: request.bloodRequirementDetails.contactNumber,
+                            fullName: request.personalDetails.fullName,
+                            mobileNumber: request.personalDetails.mobileNumber,
+                            email: request.personalDetails.emailAddress,
+                            relationship: request.personalDetails.relationshipToPatient,
+                            patientAge: request.personalDetails.patientAge,
+                            gender: request.personalDetails.gender,
+                            reason: request.bloodRequirementDetails.reasonForRequest,
+                            doctor: request.bloodRequirementDetails.doctorReferenceName
+                        }
+                    }));
+                    setRequests(formattedRequests);
+                } else {
+                    setRequests([]);
+                }
             })
             .catch(error => {
                 console.error('Error fetching requests:', error);
