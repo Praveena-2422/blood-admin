@@ -1,0 +1,25 @@
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Env files
+.env
+
+# IDE
+.vscode/
+*.swp
+*.swo
+.idea/
+
+# Dependency folders
+node_modules/
+package-lock.json

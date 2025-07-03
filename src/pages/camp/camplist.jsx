@@ -5,6 +5,7 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { Link } from 'react-router-dom';
 import $ from 'jquery';
 import 'datatables.net-dt/js/dataTables.dataTables';
+import campApiProvider from "../../apiProvider/campApiProvider";
 
 const CalendarMainPage = () => {
   const [camps, setCamps] = useState([]);
@@ -14,7 +15,8 @@ const CalendarMainPage = () => {
   useEffect(() => {
     const fetchCamps = async () => {
       try {
-        const response = await fetch('https://blood-backend-lf52.onrender.com/api/camps');
+        const response = await campApiProvider.getCampsData()
+        // const response = await fetch('https://blood-backend-lf52.onrender.com/api/camps');
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -50,8 +52,8 @@ const CalendarMainPage = () => {
     }
   }, [camps]);
 
-  if (loading) return <div className="text-center">Loading...</div>;
-  if (error) return <div className="text-center text-danger">Error: {error}</div>;
+  // if (loading) return <div className="text-center">Loading...</div>;
+  // if (error) return <div className="text-center text-danger">Error: {error}</div>;
 
   return (
     <MasterLayout>

@@ -1,0 +1,5 @@
+git status
+git add .  (if everything add)
+git add sr/filenmae src/folder/filename (some files only move)
+git commit -m "commit chnages"
+git push
