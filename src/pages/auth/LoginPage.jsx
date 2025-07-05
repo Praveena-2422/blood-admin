@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -10,39 +10,56 @@ import {
   Typography,
   Alert
 } from '@mui/material';
+import { apiClient } from '../../network/apiClient';
+import { toast, ToastContainer } from 'react-toastify';
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  // Check for existing admin token and redirect to dashboard if found
+  useEffect(() => {
+    const adminToken = localStorage.getItem('adminToken');
+    if (adminToken) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, []);
+
+  const handleLogin = async () => {
+    // e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
-      const response = await fetch('https://blood-backend-lf52.onrender.com/api/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      if (!phone || !password) {
+        toast.error('Please fill all fields');
+        return;
+      }
 
-      const data = await response.json();
+      console.log(phone,password,"aaaaaaaaaa");
+      
 
-      if (response.ok) {
-        // Store token in localStorage
-        localStorage.setItem('token', data.token);
-        navigate('/');
+      const response = await apiClient.post('user/adminLogin', { phone, password });
+      const data = await response.data;
+      console.log(data,"data");
+
+      if (data.success) { 
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminInfo', JSON.stringify(data.admin));
+        window.location.href = '/dashboard';
+        // navigate('/dashboard');
+        toast.success('Admin login successful');
       } else {
-        setError('Invalid username or password');
+        toast.error(data.message || 'Invalid credentials');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      console.error('Login error:', err);
+      if (err.response) {
+        toast.error(err.response.data.message || 'Login failed');
+      } else {
+        toast.error('Network error occurred');
+      }
     } finally {
       setLoading(false);
     }
@@ -96,25 +113,20 @@ const LoginForm = () => {
             }}
           >
             <Typography component="h1" variant="h5">
-              Sign in
+              Admin Login
             </Typography>
-            {error && (
-              <Alert severity="error" sx={{ width: '100%' }}>
-                {error}
-              </Alert>
-            )}
-            <Box component="form" onSubmit={handleLogin} sx={{ mt: 1, width: '100%' }}>
+            {/* <form onSubmit={handleLogin}> */}
               <TextField
                 margin="normal"
                 required
                 fullWidth
-                id="username"
-                label="Username"
-                name="username"
+                id="phone"
+                label="Mobile Number"
+                name="phone"
                 autoComplete="username"
                 autoFocus
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
               <TextField
                 margin="normal"
@@ -134,13 +146,15 @@ const LoginForm = () => {
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
+                onClick={handleLogin}
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? 'Signing in...' : 'Login'}
               </Button>
-            </Box>
+            {/* </form> */}
           </Container>
         </Grid>
       </Grid>
+      <ToastContainer />
     </Box>
   );
 };

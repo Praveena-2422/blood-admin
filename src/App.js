@@ -1,26 +1,83 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Loginpage from "./pages/auth/LoginPage";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import HomePageOne from "./pages/HomePageOne";
 import ErrorPage from "./pages/ErrorPage";
 import RouteScrollToTop from "./helper/RouteScrollToTop";
 import CalendarMainPage from "./pages/camp/camplist";
 import DonorListPage from "./pages/donors/DonorListPage";
 import AddRequesterPage from "./pages/requestor/AddRequesterPage";
+import AddAdmin from "./pages/admin/addadmin";
+import LoginForm from "./pages/auth/LoginPage";
+import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/AuthContext";
+
+const ProtectedRoute = ({ children }) => {
+  const { adminToken } = useAuth();
+  
+  if (!adminToken) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
 
 function App() {
   return (
     <BrowserRouter>
+      <AuthProvider>
         <RouteScrollToTop />
         <Routes>
           
-        <Route path="/login" element={<Loginpage />} />
-          <Route path="/"  element={<HomePageOne />} />
-          
-        <Route exact path='/camp' element={<CalendarMainPage />} />
-        <Route exact path='/donor-list' element={<DonorListPage />} />
-        <Route exact path='/add-requester' element={<AddRequesterPage />} />
-        <Route exact path='*' element={<ErrorPage />} />
-      </Routes>             
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/" element={<LoginForm />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <HomePageOne />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/camp"
+          element={
+            <ProtectedRoute>
+              <CalendarMainPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/donor-list"
+          element={
+            <ProtectedRoute>
+              <DonorListPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/add-requester"
+          element={
+            <ProtectedRoute>
+              <AddRequesterPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/add-admin"
+          element={
+            <ProtectedRoute>
+              <AddAdmin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<ErrorPage />} />
+      </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
