@@ -161,10 +161,13 @@ const [formData, setFormData] = useState({
     }, []);
     const fetchEvents = async () => {
       try {
+          console.log('Fetching camps from:', apiClient.defaults.baseURL + '/camps');
           const response = await apiClient.get('/camps');
           console.log('API Response:', response); // Debug log
           const data = response.data;
+          console.log('Response data:', data);
           if (!data.camps) {
+              console.error('No camps array in response:', data);
               throw new Error('Invalid response format');
           }
           const formattedEvents = data.camps.map(camp => ({
@@ -187,7 +190,9 @@ const [formData, setFormData] = useState({
               status: camp.status
           }));
           setEvents(formattedEvents);
+          setCamps(formattedEvents); // Also set camps state for the table
       } catch (err) {
+          console.error('Error fetching camps:', err);
           setError(err.message);
       } finally {
           setLoading(false);
@@ -1078,8 +1083,8 @@ console.log(payload,"ytyydtf");
               </tr>
             </thead>
             <tbody>
-              {camps && camps.map((camp, index) => (
-                <tr key={camp.id}>
+              {camps && camps.length > 0 ? camps.map((camp, index) => (
+                <tr key={camp.id || index}>
                   <td>
                     <div className="form-check style-check d-flex align-items-center">
                       <input className="form-check-input" type="checkbox" />
@@ -1088,42 +1093,64 @@ console.log(payload,"ytyydtf");
                   </td>
                   <td className="text-xs">
                     <Link to="#" className="text-primary-600">
-                      {camp.campId}
+                      {camp.campId || 'N/A'}
                     </Link>
                   </td>
                   <td className="text-xs">
                     <div className="d-flex align-items-center">
                       <span className="fw-medium flex-grow-1">
-                        {camp.title}
+                        {camp.title || 'N/A'}
                       </span>
                     </div>
                   </td>
-                  <td className="text-xs">{camp.date}</td>
-                  <td className="text-xs">{camp.time}</td>
-                  <td className="text-xs">{camp.donors}</td>
-                  <td className="text-xs">{camp.location}</td>
+                  <td className="text-xs">{camp.fromdate ? new Date(camp.fromdate).toLocaleDateString() : 'N/A'}</td>
+                  <td className="text-xs">{camp.time || 'N/A'}</td>
+                  <td className="text-xs">{camp.donors || 0}</td>
+                  <td className="text-xs">{camp.location || 'N/A'}</td>
                   <td className="text-xs">
                     <Link
                       to="#"
                       className="w-24-px h-24-px me-4 bg-primary-light text-primary-600 rounded-circle d-inline-flex align-items-center justify-content-center"
+                      onClick={() => openViewModal(camp)}
                     >
                       <Icon icon="iconamoon:eye-light" width="12" />
                     </Link>
                     <Link
                       to="#"
                       className="w-24-px h-24-px me-4 bg-success-focus text-success-main rounded-circle d-inline-flex align-items-center justify-content-center"
+                      onClick={() => openEditModal(camp)}
                     >
                       <Icon icon="fluent-mdl2:accept" width="12" />
                     </Link>
                     <Link
                       to="#"
                       className="w-24-px h-24-px me-4 bg-danger-focus text-danger-main rounded-circle d-inline-flex align-items-center justify-content-center"
+                      onClick={() => openDeleteModal(camp)}
                     >
                       <Icon icon="material-symbols:cancel" width="12" />
                     </Link>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="8" className="text-center text-xs py-4">
+                    {loading ? (
+                      <div className="d-flex align-items-center justify-content-center">
+                        <div className="spinner-border spinner-border-sm me-2" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        Loading camps...
+                      </div>
+                    ) : error ? (
+                      <div className="text-danger">
+                        Error: {error}
+                      </div>
+                    ) : (
+                      'No camps found'
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

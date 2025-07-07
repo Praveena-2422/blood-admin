@@ -9,6 +9,7 @@ import AddAdmin from "./pages/admin/addadmin";
 import LoginForm from "./pages/auth/LoginPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./contexts/AuthContext";
+import LoginPage from "./pages/login";
 
 const ProtectedRoute = ({ children }) => {
   const { adminToken } = useAuth();
@@ -74,6 +75,12 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* <Route
+          path="/3dlogin"
+          element={<LoginPage />}
+
+        /> */}
 
         <Route path="*" element={<ErrorPage />} />
       </Routes>

@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 const MasterLayout = ({ children }) => {
   let [sidebarActive, seSidebarActive] = useState(false);
   let [mobileMenu, setMobileMenu] = useState(false);
+  const [adminInfo, setAdminInfo] = useState(null);
   const location = useLocation(); // Hook to get the current route
   const navigate = useNavigate();
 
@@ -21,6 +22,19 @@ const MasterLayout = ({ children }) => {
     // Optional: You might want to reload the page to reset all state
     window.location.reload();
   };
+
+  // Load admin info from localStorage on component mount
+  useEffect(() => {
+    const storedAdminInfo = localStorage.getItem('adminInfo');
+    if (storedAdminInfo) {
+      try {
+        const parsedAdminInfo = JSON.parse(storedAdminInfo);
+        setAdminInfo(parsedAdminInfo);
+      } catch (error) {
+        console.error('Error parsing admin info from localStorage:', error);
+      }
+    }
+  }, []);
 
   useEffect(() => {
 
@@ -395,10 +409,10 @@ const MasterLayout = ({ children }) => {
                     <div className='py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2'>
                       <div>
                         <h6 className='text-lg text-primary-light fw-semibold mb-2'>
-                          Shaidul Islam
+                          {adminInfo ? adminInfo.name : 'Admin User'}
                         </h6>
                         <span className='text-secondary-light fw-medium text-sm'>
-                          Admin
+                          {adminInfo ? adminInfo.phone : 'Admin'}
                         </span>
                       </div>
                       <button type='button' className='hover-text-danger'>
