@@ -79,16 +79,20 @@ const [formData, setFormData] = useState({
 
 
   useEffect(() => {
-    if (camps.length > 0) {
-      const table = $('#dataTable').DataTable({
-        pageLength: 10,
-        scrollX: true,
-        responsive: true
-      });
+    // Destroy existing DataTable if it exists
+    if ($.fn.DataTable.isDataTable('#dataTable')) {
+      $('#dataTable').DataTable().destroy();
+    }
 
-      return () => {
-        table.destroy(true);
-      };
+    if (camps.length > 0) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        const table = $('#dataTable').DataTable({
+          pageLength: 10,
+          scrollX: true,
+          responsive: true
+        });
+      }, 100);
     }
   }, [camps]);
 
@@ -391,6 +395,203 @@ console.log(payload,"ytyydtf");
         setCurrentEvent(event);
     };
 
+    const openCompleteModal = (event) => {
+        setCurrentEvent(event);
+    };
+
+    const openCancelModal = (event) => {
+        setCurrentEvent(event);
+    };
+
+    const handleCompleteCamp = async () => {
+        try {
+            const response = await apiClient.put(`/camps/updatecamp/${currentEvent.id}`, {
+                ...currentEvent,
+                status: 'completed'
+            });
+
+            if (response.status === 200) {
+                // Update the local state
+                const updatedCamps = camps.map(camp =>
+                    camp.id === currentEvent.id ? { ...camp, status: 'completed' } : camp
+                );
+                setCamps(updatedCamps);
+                
+                // Also update events state for calendar
+                const updatedEvents = events.map(event =>
+                    event.id === currentEvent.id ? { ...event, status: 'completed' } : event
+                );
+                setEvents(updatedEvents);
+                
+                document.getElementById('closeCompleteModal').click();
+            } else {
+                throw new Error('Failed to update camp status');
+            }
+        } catch (err) {
+            console.error('Error completing camp:', err);
+            setError(err.message);
+        }
+    };
+
+    const handleCancelCamp = async () => {
+        try {
+            const response = await apiClient.put(`/camps/updatecamp/${currentEvent.id}`, {
+                ...currentEvent,
+                status: 'cancelled'
+            });
+
+            if (response.status === 200) {
+                // Update the local state
+                const updatedCamps = camps.map(camp =>
+                    camp.id === currentEvent.id ? { ...camp, status: 'cancelled' } : camp
+                );
+                setCamps(updatedCamps);
+                
+                // Also update events state for calendar
+                const updatedEvents = events.map(event =>
+                    event.id === currentEvent.id ? { ...event, status: 'cancelled' } : event
+                );
+                setEvents(updatedEvents);
+                
+                document.getElementById('closeCancelModal').click();
+            } else {
+                throw new Error('Failed to update camp status');
+            }
+        } catch (err) {
+            console.error('Error cancelling camp:', err);
+            setError(err.message);
+        }
+    };
+
+    const [addDonorsCount, setAddDonorsCount] = useState(0);
+    const [addDonorsCamp, setAddDonorsCamp] = useState(null);
+    const [donorUsers, setDonorUsers] = useState([]);
+    const [selectedDonorUserIds, setSelectedDonorUserIds] = useState([]);
+    const [donorSearchMobile, setDonorSearchMobile] = useState("");
+    const [showAddDonorForm, setShowAddDonorForm] = useState(false);
+    const [addDonorFormData, setAddDonorFormData] = useState({
+      fullName: '',
+      mobileNumber: '',
+      email: '',
+      dateOfBirth: '',
+      gender: '',
+      bloodGroup: '',
+      heightCm: '',
+      weightKg: '',
+      lastDonationDate: '',
+      eligibleToDonate: true,
+      state: '',
+      city: '',
+      area: '',
+      pinCode: '',
+      emergencyContactNumber: '',
+      existingHealthIssues: '',
+      agreedToTerms: false
+    });
+    const [addDonorLoading, setAddDonorLoading] = useState(false);
+    const [addDonorError, setAddDonorError] = useState('');
+    const [addDonorSuccess, setAddDonorSuccess] = useState('');
+
+    const handleAddDonorFormChange = (e) => {
+      const { name, value, type, checked } = e.target;
+      setAddDonorFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    };
+
+    const handleShowAddDonorForm = () => {
+      setShowAddDonorForm(true);
+      setAddDonorFormData(prev => ({ ...prev, mobileNumber: donorSearchMobile }));
+    };
+
+    const handleAddDonorSubmit = async (e) => {
+      e.preventDefault();
+      setAddDonorLoading(true);
+      setAddDonorError('');
+      setAddDonorSuccess('');
+      try {
+        // Validate required fields (simple check)
+        if (!addDonorFormData.fullName || !addDonorFormData.mobileNumber || !addDonorFormData.dateOfBirth || !addDonorFormData.gender || !addDonorFormData.bloodGroup || !addDonorFormData.heightCm || !addDonorFormData.weightKg || !addDonorFormData.lastDonationDate || !addDonorFormData.state || !addDonorFormData.city || !addDonorFormData.area || !addDonorFormData.pinCode || !addDonorFormData.emergencyContactNumber || !addDonorFormData.existingHealthIssues || !addDonorFormData.agreedToTerms) {
+          setAddDonorError('Please fill all required fields');
+          setAddDonorLoading(false);
+          return;
+        }
+        const payload = { ...addDonorFormData };
+        const response = await apiClient.post('/user/register', payload);
+        if (response.data && response.data.success && response.data.data) {
+          setAddDonorSuccess('Donor added successfully!');
+          // Add new donor to donorUsers and auto-select
+          setDonorUsers(prev => [...prev, response.data.data]);
+          setSelectedDonorUserIds(prev => [...prev, response.data.data._id]);
+          setShowAddDonorForm(false);
+          setAddDonorFormData({
+            fullName: '', mobileNumber: '', email: '', dateOfBirth: '', gender: '', bloodGroup: '', heightCm: '', weightKg: '', lastDonationDate: '', eligibleToDonate: true, state: '', city: '', area: '', pinCode: '', emergencyContactNumber: '', existingHealthIssues: '', agreedToTerms: false
+          });
+          setAddDonorError('');
+        } else {
+          setAddDonorError(response.data.message || 'Failed to add donor');
+        }
+      } catch (err) {
+        setAddDonorError(err.response?.data?.message || err.message || 'Failed to add donor');
+      } finally {
+        setAddDonorLoading(false);
+      }
+    };
+
+    const openAddDonorsModal = async (camp) => {
+      setAddDonorsCamp(camp);
+      setAddDonorsCount(0);
+      setSelectedDonorUserIds([]);
+      try {
+        const response = await apiClient.get('/user/getAllUser');
+        if (response.data && response.data.data) {
+          setDonorUsers(response.data.data);
+        } else {
+          setDonorUsers([]);
+        }
+      } catch (err) {
+        setDonorUsers([]);
+      }
+    };
+
+    const handleDonorUserCheckbox = (userId) => {
+      setSelectedDonorUserIds(prev =>
+        prev.includes(userId)
+          ? prev.filter(id => id !== userId)
+          : [...prev, userId]
+      );
+    };
+
+    const handleAddDonors = async (e) => {
+      e.preventDefault();
+      if (!addDonorsCamp || selectedDonorUserIds.length === 0) return;
+      try {
+        const updatedDonors = (addDonorsCamp.donors || 0) + selectedDonorUserIds.length;
+        // Optionally, send selectedDonorUserIds to backend if you want to associate users with the camp
+        const response = await apiClient.put(`/camps/updatecamp/${addDonorsCamp.id}`, {
+          ...addDonorsCamp,
+          donors: updatedDonors,
+          donorUserIds: selectedDonorUserIds // if your backend supports this
+        });
+        if (response.status === 200) {
+          // Update local state
+          const updatedCamps = camps.map(camp =>
+            camp.id === addDonorsCamp.id ? { ...camp, donors: updatedDonors } : camp
+          );
+          setCamps(updatedCamps);
+          setEvents(events.map(event =>
+            event.id === addDonorsCamp.id ? { ...event, donors: updatedDonors } : event
+          ));
+          document.getElementById('closeAddDonorsModal').click();
+        } else {
+          throw new Error('Failed to update donors');
+        }
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
     console.log(formData, "formData");
   return (
     <MasterLayout>
@@ -662,7 +863,7 @@ console.log(payload,"ytyydtf");
                                     </div>
                                     <div className="col-12 mb-20">
                                         <label className="form-label fw-semibold text-primary-light text-sm mb-8">
-                                            Add Address :{" "}
+                                            Add Location :{" "}
                                         </label>
                                         <input
                                             type="text"
@@ -787,25 +988,105 @@ console.log(payload,"ytyydtf");
                         </div>
                         <div className="modal-body p-24">
                             {currentEvent && (
-    <>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Camp ID</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.campId}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Title</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.title}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Organizer</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.organizer}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">From Date</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.fromdate}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">To Date</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.todate}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Time</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.time}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Units</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.units}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Donors</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.donors}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Location</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.location}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Address</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.address}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">State</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.state}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">City</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.city}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Pincode</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.pincode}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Contact</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.contact}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Email</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.email}</h6></div>
-        <div className="mb-12"><span className="text-secondary-light txt-sm fw-medium">Status</span><h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.status}</h6></div>
-    </>
-)}
+                                <div className="row">
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Camp ID</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.campId || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Title</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.title || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Organizer</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.organizer || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Status</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">
+                                            <span className={`badge ${currentEvent.status === 'completed' ? 'bg-success' : currentEvent.status === 'cancelled' ? 'bg-danger' : 'bg-warning'}`}>
+                                                {currentEvent.status || 'N/A'}
+                                            </span>
+                                        </h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">From Date</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">
+                                            {currentEvent.fromdate ? new Date(currentEvent.fromdate).toLocaleDateString() : 'N/A'}
+                                        </h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">To Date</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">
+                                            {currentEvent.todate ? new Date(currentEvent.todate).toLocaleDateString() : 'N/A'}
+                                        </h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Time</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.time || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Units</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.units || 0}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Donors</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.donors || 0}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Contact</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.contact || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Email</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.email || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Pincode</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.pincode || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">State</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.state || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-md-6 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">City</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.city || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-12 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Location</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.location || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-12 mb-16">
+                                        <span className="text-secondary-light text-sm fw-medium">Address</span>
+                                        <h6 className="text-primary-light fw-semibold text-md mb-0 mt-4">{currentEvent.address || 'N/A'}</h6>
+                                    </div>
+                                    <div className="col-12 mt-4 d-flex gap-3">
+                                      {currentEvent.status === 'planned' && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            className="btn btn-success border border-success-600 text-md px-24 py-12 radius-8"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#completeCampModal"
+                                            onClick={() => openCompleteModal(currentEvent)}
+                                          >
+                                            Complete Camp
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="btn btn-warning border border-warning-600 text-md px-24 py-12 radius-8"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#cancelCampModal"
+                                            onClick={() => openCancelModal(currentEvent)}
+                                          >
+                                            Cancel Camp
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1014,6 +1295,94 @@ console.log(payload,"ytyydtf");
                 </div>
             </div>
 
+            {/* Modal Complete Camp */}
+            <div
+                className="modal fade"
+                id="completeCampModal"
+                tabIndex={-1}
+                aria-hidden="true"
+            >
+                <div className="modal-dialog modal-sm modal-dialog modal-dialog-centered">
+                    <div className="modal-content radius-16 bg-base">
+                        <div className="modal-body p-24 text-center">
+                            <span className="mb-16 fs-1 line-height-1 text-success">
+                                <Icon
+                                    icon="fluent-mdl2:accept"
+                                    className="menu-icon"
+                                />
+                            </span>
+                            <h6 className="text-lg fw-semibold text-primary-light mb-0">
+                                You want to complete this camp?
+                            </h6>
+                            <p className="text-secondary-light text-sm mt-8 mb-0">
+                                This will change the status from "Planned" to "Completed"
+                            </p>
+                            <div className="d-flex align-items-center justify-content-center gap-3 mt-24">
+                                <button
+                                    id="closeCompleteModal"
+                                    type="button"
+                                    className="w-50 border border-secondary-600 bg-hover-secondary-200 text-secondary-600 text-md px-40 py-11 radius-8"
+                                    data-bs-dismiss="modal"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="w-50 btn btn-success border border-success-600 text-md px-24 py-12 radius-8"
+                                    onClick={handleCompleteCamp}
+                                >
+                                    Yes, Complete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Modal Cancel Camp */}
+            <div
+                className="modal fade"
+                id="cancelCampModal"
+                tabIndex={-1}
+                aria-hidden="true"
+            >
+                <div className="modal-dialog modal-sm modal-dialog modal-dialog-centered">
+                    <div className="modal-content radius-16 bg-base">
+                        <div className="modal-body p-24 text-center">
+                            <span className="mb-16 fs-1 line-height-1 text-warning">
+                                <Icon
+                                    icon="material-symbols:cancel"
+                                    className="menu-icon"
+                                />
+                            </span>
+                            <h6 className="text-lg fw-semibold text-primary-light mb-0">
+                                You want to cancel this camp?
+                            </h6>
+                            <p className="text-secondary-light text-sm mt-8 mb-0">
+                                This will change the status from "Planned" to "Cancelled"
+                            </p>
+                            <div className="d-flex align-items-center justify-content-center gap-3 mt-24">
+                                <button
+                                    id="closeCancelModal"
+                                    type="button"
+                                    className="w-50 border border-secondary-600 bg-hover-secondary-200 text-secondary-600 text-md px-40 py-11 radius-8"
+                                    data-bs-dismiss="modal"
+                                >
+                                    No
+                                </button>
+                                <button
+                                    type="button"
+                                    className="w-50 btn btn-warning border border-warning-600 text-md px-24 py-12 radius-8"
+                                    onClick={handleCancelCamp}
+                                >
+                                    Yes, Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Modal Delete Event */}
             <div
                 className="modal fade"
@@ -1054,6 +1423,202 @@ console.log(payload,"ytyydtf");
                     </div>
                 </div>
             </div>
+
+            {/* Modal Add Donors */}
+            <div
+              className="modal fade"
+              id="addDonorsModal"
+              tabIndex={-1}
+              aria-hidden="true"
+            >
+              <div className="modal-dialog modal-lg modal-dialog modal-dialog-centered">
+                <div className="modal-content radius-16 bg-base">
+                  <div className="modal-header py-16 px-24 border border-top-0 border-start-0 border-end-0">
+                    <h1 className="modal-title fs-5">Add Donors</h1>
+                    <button
+                      id="closeAddDonorsModal"
+                      type="button"
+                      className="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Close"
+                    />
+                  </div>
+                  <form onSubmit={handleAddDonors}>
+                    <div className="modal-body p-24">
+                      <div className="mb-3">
+                        <label className="form-label">Select Donors to Add</label>
+                        <input
+                          type="text"
+                          className="form-control mb-2"
+                          placeholder="Search by Mobile Number"
+                          value={donorSearchMobile}
+                          onChange={e => setDonorSearchMobile(e.target.value)}
+                        />
+                        <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
+                          <table className="table table-sm table-bordered mb-0">
+                            <thead>
+                              <tr>
+                                <th></th>
+                                <th>Name</th>
+                                <th>Blood Group</th>
+                                <th>Mobile</th>
+                                <th>City</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {donorUsers.filter(user =>
+                                donorSearchMobile === "" || (user.mobileNumber && user.mobileNumber.includes(donorSearchMobile))
+                              ).length === 0 && (
+                                <tr><td colSpan="5" className="text-center">No users found</td></tr>
+                              )}
+                              {donorUsers.filter(user =>
+                                donorSearchMobile === "" || (user.mobileNumber && user.mobileNumber.includes(donorSearchMobile))
+                              ).map(user => (
+                                <tr key={user._id}>
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedDonorUserIds.includes(user._id)}
+                                      onChange={() => handleDonorUserCheckbox(user._id)}
+                                    />
+                                  </td>
+                                  <td>{user.fullName}</td>
+                                  <td>{user.bloodGroup}</td>
+                                  <td>{user.mobileNumber}</td>
+                                  <td>{user.city}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      {!showAddDonorForm && donorUsers.filter(user => donorSearchMobile === "" || (user.mobileNumber && user.mobileNumber.includes(donorSearchMobile))).length === 0 && (
+                        <div className="text-center mt-3">
+                          <button type="button" className="btn btn-outline-primary" onClick={handleShowAddDonorForm}>
+                            Add Donor
+                          </button>
+                        </div>
+                      )}
+                      {showAddDonorForm && (
+                        <form onSubmit={handleAddDonorSubmit} className="mt-3">
+                          <div className="row">
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Full Name</label>
+                              <input type="text" name="fullName" className="form-control radius-8" placeholder="Enter full name" value={addDonorFormData.fullName} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Mobile Number</label>
+                              <input type="tel" name="mobileNumber" className="form-control radius-8" placeholder="Enter mobile number" value={addDonorFormData.mobileNumber} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Email</label>
+                              <input type="email" name="email" className="form-control radius-8" placeholder="Enter email address" value={addDonorFormData.email} onChange={handleAddDonorFormChange} />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Date of Birth</label>
+                              <input type="date" name="dateOfBirth" className="form-control radius-8" value={addDonorFormData.dateOfBirth} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Gender</label>
+                              <select name="gender" className="form-control radius-8" value={addDonorFormData.gender} onChange={handleAddDonorFormChange} required>
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Blood Group</label>
+                              <select name="bloodGroup" className="form-control radius-8" value={addDonorFormData.bloodGroup} onChange={handleAddDonorFormChange} required>
+                                <option value="">Select Blood Group</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                              </select>
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Height (cm)</label>
+                              <input type="number" name="heightCm" className="form-control radius-8" placeholder="Enter height in cm" value={addDonorFormData.heightCm} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Weight (kg)</label>
+                              <input type="number" name="weightKg" className="form-control radius-8" placeholder="Enter weight in kg" value={addDonorFormData.weightKg} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Last Donation Date</label>
+                              <input type="date" name="lastDonationDate" className="form-control radius-8" value={addDonorFormData.lastDonationDate} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Eligible to Donate</label>
+                              <div className="form-check form-switch">
+                                <input className="form-check-input" type="checkbox" id="eligibleToDonate" name="eligibleToDonate" checked={addDonorFormData.eligibleToDonate} onChange={handleAddDonorFormChange} />
+                                <label className="form-check-label text-sm" htmlFor="eligibleToDonate">{addDonorFormData.eligibleToDonate ? 'Eligible' : 'Not Eligible'}</label>
+                              </div>
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">State</label>
+                              <input type="text" name="state" className="form-control radius-8" placeholder="Enter state" value={addDonorFormData.state} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">City</label>
+                              <input type="text" name="city" className="form-control radius-8" placeholder="Enter city" value={addDonorFormData.city} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Area</label>
+                              <input type="text" name="area" className="form-control radius-8" placeholder="Enter area" value={addDonorFormData.area} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Pin Code</label>
+                              <input type="text" name="pinCode" className="form-control radius-8" placeholder="Enter pin code" value={addDonorFormData.pinCode} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Emergency Contact</label>
+                              <input type="tel" name="emergencyContactNumber" className="form-control radius-8" placeholder="Enter emergency contact" value={addDonorFormData.emergencyContactNumber} onChange={handleAddDonorFormChange} required />
+                            </div>
+                            <div className="col-md-6 mb-20">
+                              <label className="form-label fw-semibold text-primary-light text-sm mb-8">Existing Health Issues</label>
+                              <select name="existingHealthIssues" className="form-control radius-8" value={addDonorFormData.existingHealthIssues} onChange={handleAddDonorFormChange} required>
+                                <option value="">Select Option</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                              </select>
+                            </div>
+                            <div className="col-12 mb-20">
+                              <div className="form-check">
+                                <input className="form-check-input" type="checkbox" id="agreeTermsAddDonor" name="agreedToTerms" checked={addDonorFormData.agreedToTerms} onChange={handleAddDonorFormChange} required />
+                                <label className="form-check-label text-sm" htmlFor="agreeTermsAddDonor">I agree to the terms and conditions</label>
+                              </div>
+                            </div>
+                            <div className="d-flex align-items-center justify-content-center gap-3 mt-24">
+                              <button type="button" className="border border-danger-600 bg-hover-danger-200 text-danger-600 text-md px-40 py-11 radius-8" onClick={() => setShowAddDonorForm(false)}>
+                                Cancel
+                              </button>
+                              <button type="submit" className="btn btn-primary border border-primary-600 text-md px-24 py-12 radius-8" disabled={addDonorLoading}>
+                                {addDonorLoading ? (<><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Adding...</>) : 'Add Donor'}
+                              </button>
+                            </div>
+                            {addDonorError && <div className="alert alert-danger mt-2">{addDonorError}</div>}
+                            {addDonorSuccess && <div className="alert alert-success mt-2">{addDonorSuccess}</div>}
+                          </div>
+                        </form>
+                      )}
+                      <button
+                        type="submit"
+                        className="btn btn-primary mt-3"
+                        disabled={selectedDonorUserIds.length === 0}
+                      >
+                        Add Selected Donors
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
         </>
         <p></p>
       <div className="card basic-data-table">
@@ -1067,35 +1632,22 @@ console.log(payload,"ytyydtf");
           >
             <thead>
               <tr>
-                <th scope="col">
-                  <div className="form-check style-check d-flex align-items-center">
-                    <input className="form-check-input" type="checkbox" />
-                    <label className="form-check-label text-xs">S.L</label>
-                  </div>
-                </th>
-                <th scope="col" className="text-xs">Camp ID</th>
+                <th scope="col" className="text-xs">S.No</th>
                 <th scope="col" className="text-xs">Camp Title</th>
                 <th scope="col" className="text-xs">Date</th>
                 <th scope="col" className="text-xs">Time</th>
-                <th scope="col" className="text-xs">Donors</th>
+                
                 <th scope="col" className="text-xs">Location</th>
+                <th scope="col" className="text-xs">Status</th>
+                <th scope="col" className="text-xs">Total Donors</th>
+                <th scope="col" className="text-xs">Add Donors</th>
                 <th scope="col" className="text-xs">Action</th>
               </tr>
             </thead>
             <tbody>
               {camps && camps.length > 0 ? camps.map((camp, index) => (
                 <tr key={camp.id || index}>
-                  <td>
-                    <div className="form-check style-check d-flex align-items-center">
-                      <input className="form-check-input" type="checkbox" />
-                      <label className="form-check-label text-xs">{index + 1}</label>
-                    </div>
-                  </td>
-                  <td className="text-xs">
-                    <Link to="#" className="text-primary-600">
-                      {camp.campId || 'N/A'}
-                    </Link>
-                  </td>
+                  <td className="text-xs">{index + 1}</td>
                   <td className="text-xs">
                     <div className="d-flex align-items-center">
                       <span className="fw-medium flex-grow-1">
@@ -1105,30 +1657,61 @@ console.log(payload,"ytyydtf");
                   </td>
                   <td className="text-xs">{camp.fromdate ? new Date(camp.fromdate).toLocaleDateString() : 'N/A'}</td>
                   <td className="text-xs">{camp.time || 'N/A'}</td>
-                  <td className="text-xs">{camp.donors || 0}</td>
+                  
                   <td className="text-xs">{camp.location || 'N/A'}</td>
+                  <td className="text-xs">
+                    <span className={`badge ${camp.status === 'completed' ? 'bg-success' : camp.status === 'cancelled' ? 'bg-danger' : 'bg-warning'}`}>
+                      {camp.status || 'planned'}
+                    </span>
+                  </td>
+                  <td className="text-xs">{camp.donors || 0}</td>
+                  <td className="text-xs">
+                    <button
+                      className="btn btn-sm btn-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#addDonorsModal"
+                      onClick={() => openAddDonorsModal(camp)}
+                    >
+                      Add Donors
+                    </button>
+                  </td>
                   <td className="text-xs">
                     <Link
                       to="#"
                       className="w-24-px h-24-px me-4 bg-primary-light text-primary-600 rounded-circle d-inline-flex align-items-center justify-content-center"
+                      data-bs-toggle="modal"
+                      data-bs-target="#exampleModalView"
                       onClick={() => openViewModal(camp)}
                     >
                       <Icon icon="iconamoon:eye-light" width="12" />
                     </Link>
-                    <Link
+                    {/* <Link
                       to="#"
                       className="w-24-px h-24-px me-4 bg-success-focus text-success-main rounded-circle d-inline-flex align-items-center justify-content-center"
-                      onClick={() => openEditModal(camp)}
+                      data-bs-toggle="modal"
+                      data-bs-target="#completeCampModal"
+                      onClick={() => openCompleteModal(camp)}
                     >
                       <Icon icon="fluent-mdl2:accept" width="12" />
                     </Link>
                     <Link
                       to="#"
-                      className="w-24-px h-24-px me-4 bg-danger-focus text-danger-main rounded-circle d-inline-flex align-items-center justify-content-center"
-                      onClick={() => openDeleteModal(camp)}
+                      className="w-24-px h-24-px me-4 bg-warning-focus text-warning-main rounded-circle d-inline-flex align-items-center justify-content-center"
+                      data-bs-toggle="modal"
+                      data-bs-target="#cancelCampModal"
+                      onClick={() => openCancelModal(camp)}
                     >
                       <Icon icon="material-symbols:cancel" width="12" />
-                    </Link>
+                    </Link> */}
+                    {/* <Link
+                      to="#"
+                      className="w-24-px h-24-px me-4 bg-danger-focus text-danger-main rounded-circle d-inline-flex align-items-center justify-content-center"
+                      data-bs-toggle="modal"
+                      data-bs-target="#exampleModalDelete"
+                      onClick={() => openDeleteModal(camp)}
+                    >
+                      <Icon icon="fluent:delete-24-regular" width="12" />
+                    </Link> */}
                   </td>
                 </tr>
               )) : (
